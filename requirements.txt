@@ -1,0 +1,7 @@
+pandas
+numpy
+matplotlib
+requests
+websocket-client
+pyyaml
+python-telegram-bot
