@@ -1,0 +1,36 @@
+{
+  "protocol": "Railgun",
+  "chain": "BSC Testnet",
+  "wallets": [
+    {
+      "address": "0xad55b236b8ce74a3984232e98f6782360571db23",
+      "private_key": "0x2ab38a594c385d1f9d094b54f80ff8f5cf25ca20de0504ca28a25cc56b57253e",
+      "created_at": "2026-05-22T09:14:14.010973"
+    },
+    {
+      "address": "0x3999180985746c753f37f3111ab4e8bc92ed2647",
+      "private_key": "0x4c7ecd5ec15c51d1b09982a6d31cd7bc09caf525f9627a8891168577df52d4dd",
+      "created_at": "2026-05-22T09:14:14.011007"
+    }
+  ],
+  "operations": [
+    {
+      "action": "shield",
+      "from": "0xad55b236b8ce74a3984232e98f6782360571db23",
+      "amount": 0.001,
+      "commitment": "316599e9deaa2c214032a448a916ac56ef4f50f1e1e433e1ec10445e0dab2995",
+      "status": "success",
+      "timestamp": "2026-05-22T09:14:14.011947"
+    },
+    {
+      "action": "private_transfer",
+      "from": "0xad55b236b8ce74a3984232e98f6782360571db23",
+      "to": "0x3999180985746c753f37f3111ab4e8bc92ed2647",
+      "amount": 0.0005,
+      "commitment": "d59c0000dab57a2197cf4bbafc8dfe28756f86099ca5ab5a720c004e05367bde",
+      "status": "success",
+      "timestamp": "2026-05-22T09:14:14.012049"
+    }
+  ],
+  "note": "Simulated shielded privacy layer for SLH"
+}

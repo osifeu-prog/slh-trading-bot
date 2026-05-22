@@ -1,1 +1,9 @@
-# SLH Bot Configuration
+binance:
+  testnet: true
+  # Keys are loaded from .env via python-dotenv in the bot code
+risk:
+  max_usd_per_trade: 50
+  max_daily_loss: 100
+  max_trades_per_day: 20
+  cooldown_minutes: 10
+  max_exposure_usd: 300

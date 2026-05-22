@@ -1,0 +1,1 @@
+sma_20,sma_50,volume_ratio,volatility

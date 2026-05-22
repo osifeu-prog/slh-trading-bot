@@ -1,0 +1,9 @@
+﻿{
+  "agents": [
+    { "id": "main_bot", "status": "active", "role": "trading", "wake_up_time": "15:22" },
+    { "id": "supervisor", "status": "active", "role": "monitoring", "wake_up_time": null },
+    { "id": "onboarding_agent", "status": "active", "role": "onboarding", "wake_up_time": null },
+    { "id": "grok", "status": "active", "role": "architecture", "wake_up_time": null }
+  ],
+  "wake_up_enabled": true
+}
