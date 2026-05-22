@@ -1,4 +1,4 @@
-import os, time, threading, json
+﻿import os, time, threading, json
 from dotenv import load_dotenv
 from data.connectors.binance_ws import BinanceWebSocket
 from strategy.sma_crossover import SmaCrossoverStrategy
@@ -88,4 +88,5 @@ start_dashboard(8080)
 
 while True:
     time.sleep(1)
+
 
