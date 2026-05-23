@@ -1,0 +1,21 @@
+﻿name: algo-bot
+
+services:
+  slh-bot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: slh_bot
+    env_file:
+      - .env
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+      - ./ai_models:/app/ai_models
+
+networks:
+  default:
+    name: algo-bot_default
