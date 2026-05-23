@@ -1,3 +1,8 @@
-.env
-
-main_telegram.py
+﻿.env
+__pycache__/
+*.pyc
+logs/
+*.log
+backups_*/
+audit/
+*.lock

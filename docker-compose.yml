@@ -1,21 +1,25 @@
-name: algo-bot
-
-services:
-  slh-bot:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: slh_bot
-    env_file:
-      - .env
+﻿services:
+  api:
+    build: .
+    container_name: slh_api
+    restart: unless-stopped
     ports:
       - "8080:8080"
-    restart: unless-stopped
-    volumes:
-      - ./data:/app/data
-      - ./logs:/app/logs
-      - ./ai_models:/app/ai_models
+    env_file:
+      - .env
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 20s
+      timeout: 5s
+      retries: 3
 
-networks:
-  default:
-    name: algo-bot_default
+  supervisor:
+    build: .
+    container_name: slh_supervisor
+    restart: unless-stopped
+    env_file:
+      - .env
+    command: python supervisor_agent.py
+    depends_on:
+      api:
+        condition: service_healthy

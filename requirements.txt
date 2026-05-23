@@ -1,7 +1,9 @@
 ﻿fastapi
-uvicorn
-python-telegram-bot
+uvicorn[standard]
+python-telegram-bot==20.7
 websockets
 requests
 numpy
 pandas
+python-dotenv
+httpx
