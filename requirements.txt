@@ -7,3 +7,8 @@ numpy
 pandas
 python-dotenv
 httpx
+PyJWT
+PyJWT
+aiohttp
+
+python-binance

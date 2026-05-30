@@ -31,3 +31,4 @@
     depends_on:
       api:
         condition: service_healthy
+

@@ -1,34 +1,36 @@
-﻿from fastapi import WebSocket, WebSocketDisconnect
-import asyncio
-from datetime import datetime
-from api.binance_ws import binance_trade_stream
+﻿import asyncio
+import json
+import logging
+from fastapi import WebSocket, WebSocketDisconnect
+from typing import List
+
+logger = logging.getLogger(__name__)
+
+class ConnectionManager:
+    def __init__(self):
+        self.active_connections: List[WebSocket] = []
+
+    async def connect(self, websocket: WebSocket):
+        await websocket.accept()
+        self.active_connections.append(websocket)
+
+    def disconnect(self, websocket: WebSocket):
+        if websocket in self.active_connections:
+            self.active_connections.remove(websocket)
+
+    async def broadcast(self, message: str):
+        for connection in self.active_connections:
+            try:
+                await connection.send_text(message)
+            except:
+                pass
+
+manager = ConnectionManager()
 
 async def websocket_endpoint(websocket: WebSocket):
-    await websocket.accept()
-    print("? WebSocket connected - sending live Binance data every 3s")
-    trade_stream = binance_trade_stream()
+    await manager.connect(websocket)
     try:
-        i = 0
-        async for price in trade_stream:
-            data = {
-                "pnl": None,          # יעודכן כשיהיה PnL אמיתי
-                "win_rate": None,
-                "positions": [],      # ימולא ממודול הפקודות
-                "last_trade": {
-                    "symbol": "BTCUSDT",
-                    "price": price,
-                    "timestamp": datetime.now().isoformat()
-                },
-                "timestamp": datetime.now().isoformat(),
-                "status": "live",
-                "update": i,
-                "source": "binance"
-            }
-            await websocket.send_json(data)
-            print(f"?? Sent Binance price #{i}: {price}")
-            i += 1
-            await asyncio.sleep(3)   # עיכוב קל כדי לא להציף
+        while True:
+            await websocket.receive_text()
     except WebSocketDisconnect:
-        print("?? Client disconnected")
-    except Exception as e:
-        print("? Error:", e)
+        manager.disconnect(websocket)
