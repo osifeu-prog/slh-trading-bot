@@ -9,4 +9,8 @@ COPY . .
 
 ENV PYTHONUNBUFFERED=1
 
-CMD ["sh", "-c", "python run_trader.py & uvicorn main:app --host 0.0.0.0 --port 8080"]
+# Copy and set permissions for startup script
+COPY start.sh /start.sh
+RUN chmod +x /start.sh
+
+CMD ["/start.sh"]
