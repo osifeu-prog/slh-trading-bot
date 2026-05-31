@@ -2,8 +2,6 @@
 from fastapi.middleware.cors import CORSMiddleware
 import json
 import os
-from datetime import datetime
-import asyncio
 
 app = FastAPI(title="SLH Trading Bot API")
 
@@ -15,20 +13,26 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Fallback Binance client
+# Try to load Binance client
+BINANCE_AVAILABLE = False
+client = None
 try:
     from binance import Client
-    BINANCE_KEY = os.getenv("BINANCE_TESTNET_API_KEY")
-    BINANCE_SECRET = os.getenv("BINANCE_TESTNET_API_SECRET")
-    client = Client(BINANCE_KEY, BINANCE_SECRET)
-    client.API_URL = 'https://testnet.binance.vision/api'
-    BINANCE_AVAILABLE = True
-except:
-    BINANCE_AVAILABLE = False
+    key = os.getenv("BINANCE_TESTNET_API_KEY")
+    secret = os.getenv("BINANCE_TESTNET_API_SECRET")
+    if key and secret:
+        client = Client(key, secret)
+        client.API_URL = 'https://testnet.binance.vision/api'
+        BINANCE_AVAILABLE = True
+        print("✅ Binance client loaded successfully")
+    else:
+        print("⚠️ Binance keys not found in environment")
+except Exception as e:
+    print(f"⚠️ Binance import failed: {e}")
 
 @app.get("/")
 async def root():
-    return {"message": "SLH API ONLINE", "status": "live"}
+    return {"message": "SLH API ONLINE", "status": "live", "binance": BINANCE_AVAILABLE}
 
 @app.get("/health")
 async def health():
@@ -36,24 +40,24 @@ async def health():
 
 @app.get("/api/price/{symbol}")
 async def get_price(symbol: str = "BTCUSDT"):
-    # Try shared file first (Render / local)
+    # 1. Try shared file
     try:
         with open("/shared_data/last_price.json", "r") as f:
             data = json.load(f)
-            return {"symbol": data["symbol"], "price": data["price"], "source": "shared"}
+            return {"symbol": data.get("symbol"), "price": data.get("price"), "source": "shared"}
     except:
         pass
 
-    # Direct Binance fallback
-    if BINANCE_AVAILABLE:
+    # 2. Direct Binance
+    if BINANCE_AVAILABLE and client:
         try:
             ticker = client.get_symbol_ticker(symbol=symbol)
             price = float(ticker['price'])
             return {"symbol": symbol, "price": price, "source": "binance_direct"}
         except Exception as e:
             return {"error": f"Binance error: {str(e)}"}
-    
-    return {"error": "no data"}
+
+    return {"error": "no data", "message": "Check Binance keys in Render Environment"}
 
 @app.get("/api/last-price")
 async def last_price():
