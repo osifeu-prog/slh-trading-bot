@@ -1,7 +1,12 @@
-﻿fastapi
-uvicorn
-python-dotenv
+fastapi
+uvicorn[standard]
+python-telegram-bot==20.7
+websockets
 requests
-python-binance
-python-telegram-bot==20.9
+numpy
+pandas
+python-dotenv
 httpx
+PyJWT
+aiohttp
+python-binance
