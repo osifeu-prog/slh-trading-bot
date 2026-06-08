@@ -1,9 +1,9 @@
-﻿from fastapi import FastAPI
+from fastapi import FastAPI, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
-import json
-import os
+import asyncio
+import httpx
 
-app = FastAPI(title="SLH Trading Bot API")
+app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
@@ -13,56 +13,38 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Try to load Binance client
-BINANCE_AVAILABLE = False
-client = None
-try:
-    from binance import Client
-    key = os.getenv("BINANCE_TESTNET_API_KEY")
-    secret = os.getenv("BINANCE_TESTNET_API_SECRET")
-    if key and secret:
-        client = Client(key, secret)
-        client.API_URL = 'https://testnet.binance.vision/api'
-        BINANCE_AVAILABLE = True
-        print("✅ Binance client loaded successfully")
-    else:
-        print("⚠️ Binance keys not found in environment")
-except Exception as e:
-    print(f"⚠️ Binance import failed: {e}")
-
-@app.get("/")
-async def root():
-    return {"message": "SLH API ONLINE", "status": "live", "binance": BINANCE_AVAILABLE}
+BINANCE_URL = "https://api.binance.com/api/v3/ticker/price"
 
 @app.get("/health")
 async def health():
     return {"status": "healthy"}
 
+@app.get("/")
+async def root():
+    return {"status": "SLH Trading Bot running"}
+
 @app.get("/api/price/{symbol}")
-async def get_price(symbol: str = "BTCUSDT"):
-    # 1. Try shared file
+async def get_price(symbol: str):
     try:
-        with open("/shared_data/last_price.json", "r") as f:
-            data = json.load(f)
-            return {"symbol": data.get("symbol"), "price": data.get("price"), "source": "shared"}
-    except:
-        pass
+        async with httpx.AsyncClient(timeout=5) as client:
+            r = await client.get(BINANCE_URL, params={"symbol": symbol.upper()})
+            data = r.json()
+            return {"symbol": data["symbol"], "price": float(data["price"])}
+    except Exception as e:
+        return {"error": str(e)}
 
-    # 2. Direct Binance
-    if BINANCE_AVAILABLE and client:
-        try:
-            ticker = client.get_symbol_ticker(symbol=symbol)
-            price = float(ticker['price'])
-            return {"symbol": symbol, "price": price, "source": "binance_direct"}
-        except Exception as e:
-            return {"error": f"Binance error: {str(e)}"}
-
-    return {"error": "no data", "message": "Check Binance keys in Render Environment"}
-
-@app.get("/api/last-price")
-async def last_price():
-    return await get_price("BTCUSDT")
-
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8080)
+@app.websocket("/ws/price")
+async def websocket_price(websocket: WebSocket):
+    await websocket.accept()
+    async with httpx.AsyncClient() as client:
+        while True:
+            try:
+                r = await client.get(BINANCE_URL, params={"symbol": "BTCUSDT"})
+                data = r.json()
+                await websocket.send_json({
+                    "symbol": data["symbol"],
+                    "price": float(data["price"])
+                })
+            except Exception as e:
+                await websocket.send_json({"error": str(e)})
+            await asyncio.sleep(2)
