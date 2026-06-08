@@ -6,3 +6,13 @@ logs/
 backups_*/
 audit/
 *.pid
+node_modules/
+cloudflared.exe
+*.log
+*.exe
+small_api.py
+slh-*.tar
+ngrok.yml
+ngrok.zip
+start-*.ps1
+start_*.bat
