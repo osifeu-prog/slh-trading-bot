@@ -1,1 +1,9 @@
-{"symbol": "BTCUSDT", "price": 73897.44, "sma_short": 73869.33111111111, "sma_long": 73924.54523809523, "in_position": false, "timestamp": "2026-05-30T17:38:48.377285"}
+{
+  "symbol": "BTCUSDT",
+  "price": 62290.01,
+  "sma_short": 62187.86444444445,
+  "sma_long": 62142.79190476191,
+  "rsi": 72.87646499330947,
+  "in_position": false,
+  "timestamp": "2026-06-10T17:02:30.310805"
+}

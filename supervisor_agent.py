@@ -1,61 +1,41 @@
 ﻿import os
-import requests
 import logging
-from dotenv import load_dotenv
 from telegram import Update
-from telegram.ext import Application, CommandHandler, ContextTypes
+from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
+import httpx
 
+# טוקן מהסביבה
+TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+if not TOKEN:
+    raise ValueError("Missing TELEGRAM_BOT_TOKEN")
+
+PUBLIC_API_URL = os.getenv("PUBLIC_API_URL", "http://localhost:8080")
 logging.basicConfig(level=logging.INFO)
 
-load_dotenv()
-TOKEN = os.getenv("SUPERVISOR_BOT_TOKEN")
-API_URL = "http://api:8080"
-
-print("🚀 SLH Supervisor v4.2 Starting...")
-
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("👋 **SLH Trading Bot Supervisor** מוכן!\n\nפקודות:\n/health\n/status\n/price BTCUSDT\n/dashboard")
+    await update.message.reply_text("SLH Supervisor is alive!")
 
-async def health(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("✅ **SLH Supervisor Online & Healthy**")
-
-async def status(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def remote_status(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
-        r = requests.get(f"{API_URL}/health", timeout=5)
-        api_status = "✅ OK" if r.status_code == 200 else "❌ Error"
-    except:
-        api_status = "❌ No response"
-    text = f"📊 **SLH System Status**\nAPI: {api_status}\nTrader: Running\nFrontend: LIVE\nMode: Testnet"
-    await update.message.reply_text(text, parse_mode='Markdown')
+        async with httpx.AsyncClient(timeout=10) as client:
+            resp = await client.get(f"{PUBLIC_API_URL}/control/status")
+            data = resp.json()
+            await update.message.reply_text(f"📊 Status: {data}")
+    except Exception as e:
+        await update.message.reply_text(f"❌ Error: {str(e)}")
 
-async def price(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    symbol = context.args[0] if context.args else "BTCUSDT"
+async def remote_restart(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
-        r = requests.get(f"{API_URL}/api/price/{symbol}", timeout=8)
-        if r.status_code == 200:
-            data = r.json()
-            price = data.get('price') or data.get('last_price') or 'N/A'
-            await update.message.reply_text(f"📈 **{symbol}**: **${price}**")
-            return
-    except:
-        pass
-    await update.message.reply_text(f"❌ לא הצלחתי לקבל מחיר עבור {symbol}")
-
-async def dashboard(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("🌐 Dashboard זמין ב: http://localhost:3000\nסטטוס LIVE + מחירים בזמן אמת")
-
-def main():
-    if not TOKEN:
-        print("❌ Missing token!")
-        return
-    app = Application.builder().token(TOKEN).build()
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("health", health))
-    app.add_handler(CommandHandler("status", status))
-    app.add_handler(CommandHandler("price", price))
-    app.add_handler(CommandHandler("dashboard", dashboard))
-    print("✅ SLH Supervisor v4.2 Ready!")
-    app.run_polling(drop_pending_updates=True)
+        async with httpx.AsyncClient(timeout=10) as client:
+            resp = await client.post(f"{PUBLIC_API_URL}/control/restart")
+            await update.message.reply_text(f"🔄 Restart sent: {resp.text}")
+    except Exception as e:
+        await update.message.reply_text(f"❌ Error: {str(e)}")
 
 if __name__ == "__main__":
-    main()
+    app = ApplicationBuilder().token(TOKEN).build()
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("remote_status", remote_status))
+    app.add_handler(CommandHandler("remote_restart", remote_restart))
+    logging.info("✅ Supervisor started. Commands: /start , /remote_status , /remote_restart")
+    app.run_polling()

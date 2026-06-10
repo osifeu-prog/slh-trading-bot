@@ -40,11 +40,8 @@
     build: ./frontend
     container_name: slh_frontend
     restart: unless-stopped
-    env_file:
-      - .env
     ports:
       - "3000:80"
     depends_on:
       api:
         condition: service_healthy
-

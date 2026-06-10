@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 import asyncio
 import httpx
 import time
+import statistics
 
 app = FastAPI()
 
@@ -31,82 +32,40 @@ async def get_price(symbol: str):
     async with httpx.AsyncClient(timeout=5) as client:
         r = await client.get(BINANCE_URL, params={"symbol": symbol.upper()})
         data = r.json()
-        return {
-            "symbol": data["symbol"],
-            "price": float(data["price"])
-        }
+        return {"symbol": data["symbol"], "price": float(data["price"])}
 
 @app.websocket("/ws/price")
 async def websocket_price(websocket: WebSocket):
     await websocket.accept()
-
     async with httpx.AsyncClient() as client:
         while True:
             try:
-                r = await client.get(
-                    BINANCE_URL,
-                    params={"symbol": "BTCUSDT"}
-                )
-
+                r = await client.get(BINANCE_URL, params={"symbol": "BTCUSDT"})
                 data = r.json()
+
                 price = float(data["price"])
 
+                # cache prices
                 prices.append(price)
-
                 if len(prices) > 50:
                     prices.pop(0)
 
                 sma9 = sum(prices[-9:]) / min(len(prices), 9)
                 sma21 = sum(prices[-21:]) / min(len(prices), 21)
 
-                rsi = 50.0
-
-                if len(prices) >= 15:
-
-                    gains = []
-                    losses = []
-
-                    for i in range(-14, 0):
-                        change = prices[i] - prices[i - 1]
-
-                        if change > 0:
-                            gains.append(change)
-                            losses.append(0)
-                        else:
-                            gains.append(0)
-                            losses.append(abs(change))
-
-                    avg_gain = sum(gains) / 14
-                    avg_loss = sum(losses) / 14
-
-                    if avg_loss == 0:
-                        rsi = 100
-                    else:
-                        rs = avg_gain / avg_loss
-                        rsi = 100 - (100 / (1 + rs))
-
-                position = "FLAT"
-
-                if len(prices) >= 21:
-
-                    if sma9 > sma21:
-                        position = "LONG"
-
-                    elif sma9 < sma21:
-                        position = "SHORT"
+                rsi = 50  # בסיס (נשדרג אחר כך)
 
                 await websocket.send_json({
                     "symbol": data["symbol"],
                     "price": price,
                     "sma9": round(sma9, 2),
                     "sma21": round(sma21, 2),
-                    "rsi": round(rsi, 2),
-                    "position": position,
+                    "rsi": rsi,
+                    "position": "FLAT",
                     "timestamp": int(time.time() * 1000)
                 })
 
             except Exception as e:
-
                 await websocket.send_json({
                     "error": str(e),
                     "timestamp": int(time.time() * 1000)

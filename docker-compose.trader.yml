@@ -1,0 +1,10 @@
+version: "3.9"
+
+services:
+  trader:
+    build:
+      context: .
+      dockerfile: Dockerfile.trader
+    restart: always
+    environment:
+      - PYTHONUNBUFFERED=1
