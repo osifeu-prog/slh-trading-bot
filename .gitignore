@@ -16,3 +16,13 @@ ngrok.yml
 ngrok.zip
 start-*.ps1
 start_*.bat
+
+# SLH BACKUPS
+backups/
+
+# local env
+.env
+
+# python cache
+__pycache__/
+
