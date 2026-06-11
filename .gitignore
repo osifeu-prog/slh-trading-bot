@@ -26,3 +26,8 @@ backups/
 # python cache
 __pycache__/
 
+backups/
+.env
+__pycache__/
+*.log
+SLH_SCORE.json

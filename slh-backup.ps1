@@ -1,37 +1,14 @@
-
-$date = Get-Date -Format yyyyMMdd_HHmmss
-
+﻿$date = Get-Date -Format yyyyMMdd_HHmmss
 $target = "backups\daily\backup_$date"
 
-New-Item -ItemType Directory -Force $target
+New-Item -ItemType Directory -Force $target | Out-Null
 
-Copy-Item docker-compose.yml $target -Force
+Copy-Item docker-compose.yml $target -Force -ErrorAction SilentlyContinue
+Copy-Item TASKS.md $target -Force -ErrorAction SilentlyContinue
+Copy-Item .gitignore $target -Force -ErrorAction SilentlyContinue
+Copy-Item main.py $target -Force -ErrorAction SilentlyContinue
 
-if(Test-Path .env){
-    Copy-Item .env $target -Force
-}
+if(Test-Path docs){ Copy-Item docs $target -Recurse -Force }
+if(Test-Path agents){ Copy-Item agents $target -Recurse -Force }
 
-Copy-Item TASKS.md $target -Force
-
-if(Test-Path PHASE12_ROADMAP.md){
-    Copy-Item PHASE12_ROADMAP.md $target -Force
-}
-
-if(Test-Path docs){
-    Copy-Item docs $target -Recurse -Force
-}
-
-if(Test-Path agents){
-    Copy-Item agents $target -Recurse -Force
-}
-
-Copy-Item main.py $target -Force
-
-if(Test-Path supervisor_agent.py){
-    Copy-Item supervisor_agent.py $target -Force
-}
-
-Write-Host ""
-Write-Host "BACKUP CREATED:"
-Write-Host $target
-
+Write-Host "BACKUP CREATED: $target"

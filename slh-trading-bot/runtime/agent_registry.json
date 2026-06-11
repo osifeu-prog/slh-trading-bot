@@ -1,0 +1,26 @@
+{
+    "agents":  [
+                   {
+                       "last_seen":  "2026-05-22T15:44:53.4816978+03:00",
+                       "status":  "active",
+                       "pid":  null,
+                       "id":  "main_bot"
+                   },
+                   {
+                       "last_seen":  "2026-05-22T15:44:53.4816978+03:00",
+                       "status":  "active",
+                       "pid":  {
+
+                               },
+                       "id":  "supervisor"
+                   },
+                   {
+                       "last_seen":  "2026-05-22T15:44:53.5106523+03:00",
+                       "status":  "active",
+                       "pid":  {
+
+                               },
+                       "id":  "telegram_listener"
+                   }
+               ]
+}

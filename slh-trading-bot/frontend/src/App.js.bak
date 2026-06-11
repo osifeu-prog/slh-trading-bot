@@ -1,0 +1,53 @@
+﻿import React, { useEffect, useState } from 'react';
+import axios from 'axios';
+
+function App() {
+  const [status, setStatus] = useState('loading...');
+  const [prices, setPrices] = useState([]);
+
+  useEffect(() => {
+    axios.get('http://localhost:8080/api/v1/status')
+      .then(res => {
+        setStatus(res.data.status || res.data.system || 'online');
+      })
+      .catch(err => {
+        console.error(err);
+        setStatus('API ERROR');
+      });
+  }, []);
+
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      try {
+        const res = await axios.get('http://localhost:8080/api/last-price');
+
+        if (res.data.price !== null && res.data.price !== undefined) {
+          setPrices(prev => [res.data.price, ...prev].slice(0, 50));
+        }
+
+      } catch (err) {
+        console.warn('Failed to fetch price', err);
+      }
+    }, 2000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <div style={{ padding: 20, fontFamily: 'Arial' }}>
+      <h1>SLH Trading Bot</h1>
+
+      <p>Status: {status}</p>
+
+      <h3>Live BTCUSDT Prices:</h3>
+
+      <ul>
+        {prices.map((p, i) => (
+          <li key={i}>${p}</li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+export default App;

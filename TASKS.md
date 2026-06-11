@@ -148,3 +148,21 @@
 [ ] Secrets inventory
 [ ] Environment validation
 
+# ========================================
+# PHASE 12B - HARDENING
+# ========================================
+
+[ ] Git repository cleanup
+[ ] Automated backups verification
+[ ] Docker health watchdog
+[ ] Telegram Control Center
+
+[ ] PRO Doctor Score
+[ ] Telegram restart commands
+[ ] Telegram diagnostics
+[ ] Daily health reports
+[ ] Weekly system reports
+[ ] VPS readiness audit
+[ ] Disaster recovery package
+[ ] Secrets inventory
+[ ] Environment validation
