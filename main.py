@@ -19,6 +19,7 @@ app.add_middleware(
 )
 
 BINANCE_URL = "https://api.binance.com/api/v3/ticker/price"
+COINGECKO_URL = "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd"
 
 prices = []
 
@@ -32,6 +33,10 @@ async def root():
 
 @app.get("/api/price/{symbol}")
 async def get_price(symbol: str):
+    """
+    Fetch price from Binance; fallback to CoinGecko if Binance is blocked (HTTP 451).
+    """
+    # Try Binance first
     try:
         async with httpx.AsyncClient(timeout=10.0) as client:
             r = await client.get(BINANCE_URL, params={"symbol": symbol.upper()})
@@ -39,8 +44,19 @@ async def get_price(symbol: str):
             data = r.json()
             return {"symbol": data["symbol"], "price": float(data["price"])}
     except Exception as e:
-        logger.error(f"Price fetch failed for {symbol}: {e}")
-        return {"error": str(e)}, 500
+        logger.warning(f"Binance failed ({e}), trying CoinGecko")
+
+    # Fallback to CoinGecko
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            r = await client.get(COINGECKO_URL)
+            r.raise_for_status()
+            data = r.json()
+            price = float(data["bitcoin"]["usd"])
+            return {"symbol": "BTCUSDT", "price": price, "source": "coingecko"}
+    except Exception as e:
+        logger.error(f"CoinGecko also failed: {e}")
+        return {"error": "All price sources failed"}, 500
 
 @app.websocket("/ws/price")
 async def websocket_price(websocket: WebSocket):
@@ -49,13 +65,11 @@ async def websocket_price(websocket: WebSocket):
     async with httpx.AsyncClient() as client:
         while True:
             try:
-                r = await client.get(
-                    BINANCE_URL,
-                    params={"symbol": "BTCUSDT"}
-                )
-
+                # Always use CoinGecko for WebSocket to avoid 451
+                r = await client.get(COINGECKO_URL)
+                r.raise_for_status()
                 data = r.json()
-                price = float(data["price"])
+                price = float(data["bitcoin"]["usd"])
 
                 prices.append(price)
 
@@ -68,13 +82,11 @@ async def websocket_price(websocket: WebSocket):
                 rsi = 50.0
 
                 if len(prices) >= 15:
-
                     gains = []
                     losses = []
 
                     for i in range(-14, 0):
                         change = prices[i] - prices[i - 1]
-
                         if change > 0:
                             gains.append(change)
                             losses.append(0)
@@ -92,17 +104,14 @@ async def websocket_price(websocket: WebSocket):
                         rsi = 100 - (100 / (1 + rs))
 
                 position = "FLAT"
-
                 if len(prices) >= 21:
-
                     if sma9 > sma21:
                         position = "LONG"
-
                     elif sma9 < sma21:
                         position = "SHORT"
 
                 await websocket.send_json({
-                    "symbol": data["symbol"],
+                    "symbol": "BTCUSDT",
                     "price": price,
                     "sma9": round(sma9, 2),
                     "sma21": round(sma21, 2),
@@ -112,7 +121,6 @@ async def websocket_price(websocket: WebSocket):
                 })
 
             except Exception as e:
-
                 await websocket.send_json({
                     "error": str(e),
                     "timestamp": int(time.time() * 1000)
