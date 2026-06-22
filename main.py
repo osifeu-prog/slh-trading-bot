@@ -3,6 +3,10 @@ from fastapi.middleware.cors import CORSMiddleware
 import asyncio
 import httpx
 import time
+import logging
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 app = FastAPI()
 
@@ -28,13 +32,15 @@ async def root():
 
 @app.get("/api/price/{symbol}")
 async def get_price(symbol: str):
-    async with httpx.AsyncClient(timeout=5) as client:
-        r = await client.get(BINANCE_URL, params={"symbol": symbol.upper()})
-        data = r.json()
-        return {
-            "symbol": data["symbol"],
-            "price": float(data["price"])
-        }
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            r = await client.get(BINANCE_URL, params={"symbol": symbol.upper()})
+            r.raise_for_status()
+            data = r.json()
+            return {"symbol": data["symbol"], "price": float(data["price"])}
+    except Exception as e:
+        logger.error(f"Price fetch failed for {symbol}: {e}")
+        return {"error": str(e)}, 500
 
 @app.websocket("/ws/price")
 async def websocket_price(websocket: WebSocket):
