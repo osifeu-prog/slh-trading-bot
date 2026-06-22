@@ -3,6 +3,7 @@ from datetime import datetime
 import requests
 import sys
 import psycopg2
+from psycopg2.extras import RealDictCursor
 sys.path.append(os.path.join(os.path.dirname(__file__), 'risk'))
 from position_size import calculate_position_size
 from stop_loss import calculate_stop_loss
@@ -30,6 +31,7 @@ entry_price = 0.0
 position_units = 0.0
 peak_equity = INITIAL_BALANCE
 
+# DB connection
 DB_CONFIG = {
     "host": "db",
     "database": "slh_trading",
@@ -38,31 +40,6 @@ DB_CONFIG = {
 }
 
 def init_db():
-    for retry in range(10):
-        try:
-            conn = psycopg2.connect(**DB_CONFIG)
-            cur = conn.cursor()
-            cur.execute("""
-                CREATE TABLE IF NOT EXISTS trades (
-                    id SERIAL PRIMARY KEY,
-                    timestamp TIMESTAMPTZ DEFAULT NOW(),
-                    side TEXT,
-                    price REAL,
-                    units REAL,
-                    profit REAL,
-                    balance REAL
-                );
-            """)
-            conn.commit()
-            cur.close()
-            conn.close()
-            logging.info("Database initialized successfully")
-            return
-        except Exception as e:
-            logging.warning(f"DB not ready, retry {retry+1}/10: {e}")
-            time.sleep(5)
-    logging.error("Failed to initialize database after 10 retries")
-    raise RuntimeError("Database unavailable")
     conn = psycopg2.connect(**DB_CONFIG)
     cur = conn.cursor()
     cur.execute("""
@@ -168,6 +145,7 @@ while True:
                     entry_price = price
                     position_units = units
                     log_trade("BUY", price, units, 0, BALANCE)
+            send_telegram(f"BUY {SYMBOL} @ {price:.2f} Units: {units:.6f}")
 
             elif sma_short < sma_long and diff < -40 and rsi > RSI_OVERSOLD and in_position:
                 profit = (price - entry_price) * position_units
@@ -175,6 +153,7 @@ while True:
                 profit_pct = (price - entry_price) / entry_price * 100
                 print(f"STRONG SELL SIGNAL | Profit: {profit:,.2f} ({profit_pct:.2f}%) | Balance: {BALANCE:,.2f}")
                 log_trade("SELL", price, position_units, profit, BALANCE)
+            send_telegram(f"SELL {SYMBOL} @ {price:.2f} Profit: {profit:.2f} ({profit_pct:.2f}%)")
                 in_position = False
                 entry_price = 0.0
                 position_units = 0.0

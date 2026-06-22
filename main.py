@@ -1,7 +1,9 @@
-﻿from fastapi import FastAPI, WebSocket
+from fastapi import FastAPI, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
 import asyncio
 import httpx
+import psycopg2
+from psycopg2.extras import RealDictCursor
 import time
 import logging
 
@@ -58,7 +60,22 @@ async def get_price(symbol: str):
         logger.error(f"Bitfinex also failed: {e}")
         return {"error": "All price sources failed"}, 500
 
-@app.websocket("/ws/price")
+
+
+@app.get("/api/trades")
+async def get_trades():
+    try:
+        conn = psycopg2.connect(host="db", database="slh_trading", user="slh", password="slh_pass")
+        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        cur.execute("SELECT * FROM trades ORDER BY timestamp DESC LIMIT 50;")
+        rows = cur.fetchall()
+        cur.close()
+        conn.close()
+        return rows
+    except Exception as e:
+        return {"error": str(e)}
+
+("/ws/price")
 async def websocket_price(websocket: WebSocket):
     await websocket.accept()
 
@@ -109,3 +126,5 @@ async def websocket_price(websocket: WebSocket):
             except Exception as e:
                 await websocket.send_json({"error": str(e), "timestamp": int(time.time()*1000)})
             await asyncio.sleep(2)
+
+

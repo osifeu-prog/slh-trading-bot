@@ -1,8 +1,7 @@
-import os, time, json, logging
+﻿import os, time, json, logging
 from datetime import datetime
 import requests
 import sys
-import psycopg2
 sys.path.append(os.path.join(os.path.dirname(__file__), 'risk'))
 from position_size import calculate_position_size
 from stop_loss import calculate_stop_loss
@@ -29,68 +28,6 @@ in_position = False
 entry_price = 0.0
 position_units = 0.0
 peak_equity = INITIAL_BALANCE
-
-DB_CONFIG = {
-    "host": "db",
-    "database": "slh_trading",
-    "user": "slh",
-    "password": "slh_pass"
-}
-
-def init_db():
-    for retry in range(10):
-        try:
-            conn = psycopg2.connect(**DB_CONFIG)
-            cur = conn.cursor()
-            cur.execute("""
-                CREATE TABLE IF NOT EXISTS trades (
-                    id SERIAL PRIMARY KEY,
-                    timestamp TIMESTAMPTZ DEFAULT NOW(),
-                    side TEXT,
-                    price REAL,
-                    units REAL,
-                    profit REAL,
-                    balance REAL
-                );
-            """)
-            conn.commit()
-            cur.close()
-            conn.close()
-            logging.info("Database initialized successfully")
-            return
-        except Exception as e:
-            logging.warning(f"DB not ready, retry {retry+1}/10: {e}")
-            time.sleep(5)
-    logging.error("Failed to initialize database after 10 retries")
-    raise RuntimeError("Database unavailable")
-    conn = psycopg2.connect(**DB_CONFIG)
-    cur = conn.cursor()
-    cur.execute("""
-        CREATE TABLE IF NOT EXISTS trades (
-            id SERIAL PRIMARY KEY,
-            timestamp TIMESTAMPTZ DEFAULT NOW(),
-            side TEXT,
-            price REAL,
-            units REAL,
-            profit REAL,
-            balance REAL
-        );
-    """)
-    conn.commit()
-    cur.close()
-    conn.close()
-
-def log_trade(side, price, units, profit, balance):
-    try:
-        conn = psycopg2.connect(**DB_CONFIG)
-        cur = conn.cursor()
-        cur.execute("INSERT INTO trades (side, price, units, profit, balance) VALUES (%s,%s,%s,%s,%s)",
-                    (side, price, units, profit, balance))
-        conn.commit()
-        cur.close()
-        conn.close()
-    except Exception as e:
-        logging.error(f"DB log failed: {e}")
 
 def fetch_klines(symbol, interval, limit):
     url = f"https://api.binance.com/api/v3/klines"
@@ -134,8 +71,7 @@ def calculate_atr(highs, lows, closes, period=14):
         tr.append(max(h - l, abs(h - prev_c), abs(l - prev_c)))
     return sum(tr[-period:]) / period
 
-print("SLH Trader starting (with Risk Engine + PostgreSQL)...")
-init_db()
+print("SLH Trader starting (with Risk Engine)...")
 
 while True:
     try:
@@ -154,8 +90,7 @@ while True:
                 current_equity = BALANCE + (price - entry_price) * position_units
             peak_equity = max(peak_equity, current_equity)
 
-            print(f"BTC {price:,.2f} | SMA9: {sma_short:.2f} | SMA21: {sma_long:.2f} | "
-                  f"Diff: {diff:+.2f} | RSI: {rsi:.1f} | ATR: {atr:.2f} | Equity: {current_equity:,.2f}")
+            print(f"BTC {price:,.2f} | SMA9: {sma_short:.2f} | SMA21: {sma_long:.2f} | Diff: {diff:+.2f} | RSI: {rsi:.1f} | ATR: {atr:.2f} | Equity: {current_equity:,.2f}")
 
             if sma_short > sma_long and diff > 40 and rsi < RSI_OVERBOUGHT and not in_position:
                 if check_max_drawdown(current_equity, peak_equity, MAX_DRAWDOWN_PCT):
@@ -167,14 +102,12 @@ while True:
                     in_position = True
                     entry_price = price
                     position_units = units
-                    log_trade("BUY", price, units, 0, BALANCE)
 
             elif sma_short < sma_long and diff < -40 and rsi > RSI_OVERSOLD and in_position:
                 profit = (price - entry_price) * position_units
                 BALANCE += profit
                 profit_pct = (price - entry_price) / entry_price * 100
                 print(f"STRONG SELL SIGNAL | Profit: {profit:,.2f} ({profit_pct:.2f}%) | Balance: {BALANCE:,.2f}")
-                log_trade("SELL", price, position_units, profit, BALANCE)
                 in_position = False
                 entry_price = 0.0
                 position_units = 0.0

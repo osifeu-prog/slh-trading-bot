@@ -1,50 +1,62 @@
-﻿services:
+version: "3.8"
+
+services:
   api:
     build: .
     container_name: slh_api
-    restart: unless-stopped
     ports:
       - "8080:8080"
-    env_file:
-      - .env
     volumes:
-      - ./shared_data:/shared_data
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
-      interval: 20s
-      timeout: 5s
-      retries: 3
-
-  supervisor:
-    build: .
-    container_name: slh_supervisor
+      - shared_data:/shared_data
     restart: unless-stopped
-    env_file:
-      - .env
-    command: python supervisor_agent.py
-
-  trader:
-    build: .
-    container_name: slh_trader
-    restart: unless-stopped
-    env_file:
-      - .env
-    command: python run_trader.py
-    volumes:
-      - ./shared_data:/shared_data
-    depends_on:
-      api:
-        condition: service_healthy
 
   frontend:
     build: ./frontend
     container_name: slh_frontend
-    restart: unless-stopped
-    env_file:
-      - .env
     ports:
       - "3000:80"
-    depends_on:
-      api:
-        condition: service_healthy
+    restart: unless-stopped
 
+  trader:
+    build: .
+    container_name: slh_trader
+    command: python run_trader.py
+    volumes:
+      - shared_data:/shared_data
+    restart: unless-stopped
+    environment:
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID}
+
+  supervisor:
+    build: .
+    container_name: slh_supervisor
+    command: python supervisor_app.py
+    restart: unless-stopped
+    environment:
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID}
+
+  watchdog:
+    build: ./watchdog
+    container_name: slh_watchdog
+    volumes:
+      - shared_data:/shared_data
+      - /var/run/docker.sock:/var/run/docker.sock
+    restart: unless-stopped
+
+  db:
+    image: postgres:15-alpine
+    container_name: slh_db
+    environment:
+      POSTGRES_USER: slh
+      POSTGRES_PASSWORD: slh_pass
+      POSTGRES_DB: slh_trading
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+volumes:
+  shared_data:
+  pgdata:
