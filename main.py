@@ -33,9 +33,6 @@ async def root():
 
 @app.get("/api/price/{symbol}")
 async def get_price(symbol: str):
-    """
-    Fetch price from Binance; fallback to CoinGecko if Binance is blocked (HTTP 451).
-    """
     # Try Binance first
     try:
         async with httpx.AsyncClient(timeout=10.0) as client:
@@ -65,7 +62,6 @@ async def websocket_price(websocket: WebSocket):
     async with httpx.AsyncClient() as client:
         while True:
             try:
-                # Always use CoinGecko for WebSocket to avoid 451
                 r = await client.get(COINGECKO_URL)
                 r.raise_for_status()
                 data = r.json()
