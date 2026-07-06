@@ -1,0 +1,40 @@
+﻿version: '3.8'
+
+services:
+  trader:
+    build: .
+    container_name: slh_trader
+    command: python run_trader_pnl.py
+    volumes:
+      - shared_data:/shared_data
+    restart: unless-stopped
+
+  bot:
+    build: .
+    container_name: slh_bot
+    command: python bot_stable.py
+    volumes:
+      - ./state:/app/state
+      - shared_data:/shared_data
+    ports:
+      - "8081:8081"
+    restart: unless-stopped
+    environment:
+      - BOT_TOKEN=8737037440:AAEeTfPlP5LkIwldPAcrmkFNmqUlEKVj-Hw
+
+  db:
+    image: postgres:15-alpine
+    container_name: slh_db
+    environment:
+      POSTGRES_USER: slh
+      POSTGRES_PASSWORD: slh_pass
+      POSTGRES_DB: slh_trading
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
+
+volumes:
+  shared_data:
+  pgdata:
